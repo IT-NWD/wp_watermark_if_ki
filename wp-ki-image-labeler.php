@@ -2,7 +2,7 @@
 /**
  * Plugin Name: KI-Bildkennzeichnung
  * Description: Kennzeichnet KI-generierte Bilder im Medien-Manager und optional im Frontend.
- * Version: 0.3.5
+ * Version: 0.3.6
  * Author: IT-NWD
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WKI_VERSION', '0.3.5' );
+define( 'WKI_VERSION', '0.3.6' );
 define( 'WKI_FILE', __FILE__ );
 define( 'WKI_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -201,7 +201,7 @@ final class WKI_Plugin {
 	}
 
 	public function filter_frontend_html( $html ) {
-		return preg_replace_callback( '/<img\\b[^>]*>/i', function ( $match ) {
+		$html = preg_replace_callback( '/<img\\b[^>]*>/i', function ( $match ) {
 			$attachment_id = 0;
 			if ( preg_match( '/\\bwp-image-(\\d+)\\b/i', $match[0], $id_match ) ) {
 				$attachment_id = absint( $id_match[1] );
@@ -213,6 +213,34 @@ final class WKI_Plugin {
 			}
 			return '<span class="wki-ai-wrap">' . $match[0] . $this->badge_markup( $attachment_id ) . '</span>';
 		}, $html );
+		return preg_replace_callback( '/<[a-z][^>]*\\bdata-bg(?:-url)?=["\']([^"\']+)["\'][^>]*>/i', function ( $match ) {
+			$attachment_id = $this->attachment_id_from_url( html_entity_decode( $match[1] ) );
+			if ( ! $this->is_ai( $attachment_id ) ) {
+				return $match[0];
+			}
+			$tag = preg_replace( '/\\sclass=["\']([^"\']*)["\']/i', ' class="$1 wki-ai-background"', $match[0], 1, $class_count );
+			if ( ! $class_count ) {
+				$tag = preg_replace( '/^(<[a-z]+)/i', '$1 class="wki-ai-background"', $match[0] );
+			}
+			return $tag . $this->badge_markup( $attachment_id );
+		}, $html );
+	}
+
+	private function attachment_id_from_url( $url ) {
+		$attachment_id = attachment_url_to_postid( $url );
+		if ( $attachment_id ) {
+			return $attachment_id;
+		}
+		$parts = wp_parse_url( $url );
+		if ( empty( $parts['path'] ) ) {
+			return 0;
+		}
+		$path = preg_replace( '/-\\d+x\\d+(?=\\.[^.]+$)/', '', $parts['path'] );
+		if ( $path === $parts['path'] ) {
+			return 0;
+		}
+		$original_url = ( ! empty( $parts['scheme'] ) ? $parts['scheme'] . '://' : 'https://' ) . $parts['host'] . $path;
+		return attachment_url_to_postid( $original_url );
 	}
 
 	public function enqueue_frontend_style() {

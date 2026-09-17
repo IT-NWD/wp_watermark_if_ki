@@ -17,6 +17,7 @@ WordPress-Plugin zur manuellen und optional automatischen Kennzeichnung von KI-g
 - Kompakte Box mit einstellbarem Innenabstand und einstellbarer Transparenz.
 - Auswahl der vier offiziellen Icon-Varianten: schwarz, weiß und jeweils transparent.
 - Erfassung regulärer WordPress-Bilder und direkt von Avada ausgegebener Image-Elemente über die Attachment-Klasse.
+- Erfassung von Avada-Container-Hintergründen über `data-bg` und `data-bg-url`.
 - Manuelle Kennzeichnungen haben Vorrang und werden von der automatischen Erkennung nicht überschrieben.
 
 ## Installation

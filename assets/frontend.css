@@ -16,6 +16,7 @@
 
 .wki-ai-background {
 	width: 100%;
+	display: block;
 	min-height: 180px;
 	background-position: center;
 	background-repeat: no-repeat;

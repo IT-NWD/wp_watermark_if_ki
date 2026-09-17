@@ -14,6 +14,7 @@ WordPress-Plugin zur manuellen und optional automatischen Kennzeichnung von KI-g
 - Shortcode für eindeutig zugeordnete Hintergrundbilder: `[wki_ai_background image_id="123"]`.
 - Offizielle EU-SVG-Symbole für grundlegende, vollständig generierte und teilweise modifizierte Inhalte.
 - Auswahl der vier offiziellen Icon-Varianten: schwarz, weiß und jeweils transparent.
+- Erfassung regulärer WordPress-Bilder und direkt von Avada ausgegebener Image-Elemente über die Attachment-Klasse.
 - Manuelle Kennzeichnungen haben Vorrang und werden von der automatischen Erkennung nicht überschrieben.
 
 ## Installation

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: KI-Bildkennzeichnung
  * Description: Kennzeichnet KI-generierte Bilder im Medien-Manager und optional im Frontend.
- * Version: 0.2.0
+ * Version: 0.3.0
  * Author: IT-NWD
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WKI_VERSION', '0.2.0' );
+define( 'WKI_VERSION', '0.3.0' );
 define( 'WKI_FILE', __FILE__ );
 define( 'WKI_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -39,9 +39,9 @@ final class WKI_Plugin {
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_filter( 'wp_get_attachment_image_attributes', array( $this, 'image_attributes' ), 10, 3 );
-		add_filter( 'wp_get_attachment_image', array( $this, 'frontend_badge' ), 10, 5 );
 		add_shortcode( 'wki_ai_background', array( $this, 'background_shortcode' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_style' ) );
+		add_action( 'template_redirect', array( $this, 'start_frontend_buffer' ), 1 );
 	}
 
 	private function defaults() {
@@ -187,6 +187,23 @@ final class WKI_Plugin {
 		}
 		$this->enqueue_frontend_style();
 		return '<span class="wki-ai-wrap">' . $html . $this->badge_markup( $attachment_id ) . '</span>';
+	}
+
+	public function start_frontend_buffer() {
+		if ( is_admin() || wp_doing_ajax() || ! $this->settings()['frontend_badge'] ) {
+			return;
+		}
+		ob_start( array( $this, 'filter_frontend_html' ) );
+	}
+
+	public function filter_frontend_html( $html ) {
+		return preg_replace_callback( '/<img\\b[^>]*\\bwp-image-(\\d+)\\b[^>]*>/i', function ( $match ) {
+			$attachment_id = absint( $match[1] );
+			if ( ! $this->is_ai( $attachment_id ) ) {
+				return $match[0];
+			}
+			return '<span class="wki-ai-wrap">' . $match[0] . $this->badge_markup( $attachment_id ) . '</span>';
+		}, $html );
 	}
 
 	public function enqueue_frontend_style() {

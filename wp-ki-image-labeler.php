@@ -202,7 +202,7 @@ final class WKI_Plugin {
 			$attachment_id = 0;
 			if ( preg_match( '/\\bwp-image-(\\d+)\\b/i', $match[0], $id_match ) ) {
 				$attachment_id = absint( $id_match[1] );
-			} elseif ( preg_match( '/\\bdata-wki-attachment=["\\'](\\d+)["\\']/i', $match[0], $id_match ) ) {
+			} elseif ( preg_match( "/\\bdata-wki-attachment=[\"'](\\d+)[\"']/i", $match[0], $id_match ) ) {
 				$attachment_id = absint( $id_match[1] );
 			}
 			if ( ! $this->is_ai( $attachment_id ) ) {

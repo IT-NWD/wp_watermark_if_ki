@@ -1,4 +1,4 @@
-# WPKI Kennzeichnung Plugin
+# WP KI-Badge Plugin
 
 WordPress-Plugin zur manuellen und optional automatischen Kennzeichnung von KI-generierten Bildern.
 

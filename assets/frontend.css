@@ -28,8 +28,8 @@
 	box-sizing: border-box;
 	max-width: calc(100% - 16px);
 	overflow: hidden;
-	padding: var(--wki-badge-padding, 7px);
-	background: rgba(0, 0, 0, .78);
+	padding: var(--wki-badge-padding, 4px);
+	background: rgba(0, 0, 0, var(--wki-badge-opacity, 78%));
 	color: #fff;
 	font: 600 var(--wki-badge-font-size, 12px)/1.2 sans-serif;
 	border-radius: 3px;

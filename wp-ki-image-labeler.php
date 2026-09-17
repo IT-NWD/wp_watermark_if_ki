@@ -2,7 +2,7 @@
 /**
  * Plugin Name: KI-Bildkennzeichnung
  * Description: Kennzeichnet KI-generierte Bilder im Medien-Manager und optional im Frontend.
- * Version: 0.1.1
+ * Version: 0.1.2
  * Author: IT-NWD
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WKI_VERSION', '0.1.1' );
+define( 'WKI_VERSION', '0.1.2' );
 define( 'WKI_FILE', __FILE__ );
 define( 'WKI_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -47,7 +47,7 @@ final class WKI_Plugin {
 	private function defaults() {
 		return array(
 			'auto_detect' => true,
-			'frontend_badge' => false,
+			'frontend_badge' => true,
 			'badge_text' => 'KI-generiertes Bild',
 			'badge_position' => 'bottom-left',
 			'badge_font_size' => 12,
@@ -193,7 +193,7 @@ final class WKI_Plugin {
 	}
 
 	public function admin_menu() {
-		add_options_page( 'KI-Bildkennzeichnung', 'KI-Bildkennzeichnung', 'manage_options', 'wki-settings', array( $this, 'settings_page' ) );
+		add_menu_page( 'KI-Bildkennzeichnung', 'KI-Bildkennzeichnung', 'manage_options', 'wki-settings', array( $this, 'settings_page' ), 'dashicons-format-image', 58 );
 	}
 
 	public function settings_page() {

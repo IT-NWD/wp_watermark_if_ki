@@ -2,7 +2,7 @@
 /**
  * Plugin Name: KI-Bildkennzeichnung
  * Description: Kennzeichnet KI-generierte Bilder im Medien-Manager und optional im Frontend.
- * Version: 0.3.0
+ * Version: 0.3.1
  * Author: IT-NWD
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WKI_VERSION', '0.3.0' );
+define( 'WKI_VERSION', '0.3.1' );
 define( 'WKI_FILE', __FILE__ );
 define( 'WKI_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -177,6 +177,7 @@ final class WKI_Plugin {
 		if ( $this->is_ai( $attachment->ID ) ) {
 			$attr['class'] = trim( ( $attr['class'] ?? '' ) . ' wki-ai-image' );
 			$attr['data-wki-ai'] = 'true';
+			$attr['data-wki-attachment'] = (string) $attachment->ID;
 		}
 		return $attr;
 	}
@@ -197,8 +198,13 @@ final class WKI_Plugin {
 	}
 
 	public function filter_frontend_html( $html ) {
-		return preg_replace_callback( '/<img\\b[^>]*\\bwp-image-(\\d+)\\b[^>]*>/i', function ( $match ) {
-			$attachment_id = absint( $match[1] );
+		return preg_replace_callback( '/<img\\b[^>]*>/i', function ( $match ) {
+			$attachment_id = 0;
+			if ( preg_match( '/\\bwp-image-(\\d+)\\b/i', $match[0], $id_match ) ) {
+				$attachment_id = absint( $id_match[1] );
+			} elseif ( preg_match( '/\\bdata-wki-attachment=["\\'](\\d+)["\\']/i', $match[0], $id_match ) ) {
+				$attachment_id = absint( $id_match[1] );
+			}
 			if ( ! $this->is_ai( $attachment_id ) ) {
 				return $match[0];
 			}

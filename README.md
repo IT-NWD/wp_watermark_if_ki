@@ -12,7 +12,7 @@ WordPress-Plugin zur manuellen und optional automatischen Kennzeichnung von KI-g
 - Optionales Frontend-Badge auf gekennzeichneten Bildern.
 - Responsive Badge-Positionierung ohne Herauslaufen auf kleinen Bildschirmen.
 - Shortcode für eindeutig zugeordnete Hintergrundbilder: `[wki_ai_background image_id="123"]`.
-- Offizielle EU-SVG-Symbole für grundlegende, vollständig generierte und teilweise modifizierte Inhalte.
+- Kleines EU-`AI`-SVG-Logo im Badge; die Kennzeichnungsart bleibt im Medien-Manager auswählbar.
 - Auswahl der vier offiziellen Icon-Varianten: schwarz, weiß und jeweils transparent.
 - Erfassung regulärer WordPress-Bilder und direkt von Avada ausgegebener Image-Elemente über die Attachment-Klasse.
 - Manuelle Kennzeichnungen haben Vorrang und werden von der automatischen Erkennung nicht überschrieben.

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: KI-Bildkennzeichnung
  * Description: Kennzeichnet KI-generierte Bilder im Medien-Manager und optional im Frontend.
- * Version: 0.3.1
+ * Version: 0.3.2
  * Author: IT-NWD
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WKI_VERSION', '0.3.1' );
+define( 'WKI_VERSION', '0.3.2' );
 define( 'WKI_FILE', __FILE__ );
 define( 'WKI_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -52,7 +52,7 @@ final class WKI_Plugin {
 			'badge_position' => 'bottom-left',
 			'badge_font_size' => 12,
 			'badge_padding' => 7,
-			'icon_variant' => 'black-transparent',
+			'icon_variant' => 'white-transparent',
 			'keywords' => "ai-generated\nartificial intelligence\ndall-e\ndalle\nmidjourney\nstable diffusion\nadobe firefly\ngenerative fill\ncomfyui",
 		);
 	}
@@ -168,9 +168,8 @@ final class WKI_Plugin {
 
 	private function icon_url( $attachment_id ) {
 		$settings = $this->settings();
-		$type = $this->attachment_type( $attachment_id );
 		$variant = $settings['icon_variant'];
-		return plugins_url( 'assets/eu-icons/ai-' . $type . '-' . $variant . '.svg', WKI_FILE );
+		return plugins_url( 'assets/eu-icons/ai-basic-' . $variant . '.svg', WKI_FILE );
 	}
 
 	public function image_attributes( $attr, $attachment, $size ) {

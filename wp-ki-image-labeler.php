@@ -2,7 +2,7 @@
 /**
  * Plugin Name: KI-Bildkennzeichnung
  * Description: Kennzeichnet KI-generierte Bilder im Medien-Manager und optional im Frontend.
- * Version: 0.1.2
+ * Version: 0.2.0
  * Author: IT-NWD
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WKI_VERSION', '0.1.2' );
+define( 'WKI_VERSION', '0.2.0' );
 define( 'WKI_FILE', __FILE__ );
 define( 'WKI_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -48,10 +48,11 @@ final class WKI_Plugin {
 		return array(
 			'auto_detect' => true,
 			'frontend_badge' => true,
-			'badge_text' => 'KI-generiertes Bild',
+			'badge_text' => 'KI-generiert',
 			'badge_position' => 'bottom-left',
 			'badge_font_size' => 12,
 			'badge_padding' => 7,
+			'icon_variant' => 'black-transparent',
 			'keywords' => "ai-generated\nartificial intelligence\ndall-e\ndalle\nmidjourney\nstable diffusion\nadobe firefly\ngenerative fill\ncomfyui",
 		);
 	}
@@ -73,6 +74,7 @@ final class WKI_Plugin {
 			'badge_position' => in_array( $input['badge_position'] ?? $current['badge_position'], array( 'bottom-left', 'bottom-right', 'top-left', 'top-right' ), true ) ? $input['badge_position'] : $current['badge_position'],
 			'badge_font_size' => max( 9, min( 24, absint( $input['badge_font_size'] ?? $current['badge_font_size'] ) ) ),
 			'badge_padding' => max( 2, min( 20, absint( $input['badge_padding'] ?? $current['badge_padding'] ) ) ),
+			'icon_variant' => in_array( $input['icon_variant'] ?? $current['icon_variant'], array( 'black', 'black-transparent', 'white', 'white-transparent' ), true ) ? $input['icon_variant'] : $current['icon_variant'],
 			'keywords' => sanitize_textarea_field( $input['keywords'] ?? $current['keywords'] ),
 		);
 	}
@@ -83,6 +85,11 @@ final class WKI_Plugin {
 			'input' => 'html',
 			'html' => sprintf( '<label><input type="checkbox" name="attachments[%1$d][wki_is_ai]" value="1" %2$s> Als KI-generiertes Bild kennzeichnen</label><p class="description">Manuelle Kennzeichnungen haben Vorrang vor der automatischen Metadatenerkennung.</p>', $post->ID, checked( $this->is_ai( $post->ID ), true, false ) ),
 		);
+		$form_fields['wki_ai_type'] = array(
+			'label' => 'KI-Inhaltstyp',
+			'input' => 'html',
+			'html' => sprintf( '<select name="attachments[%1$d][wki_ai_type]"><option value="generated" %2$s>Vollständig KI-generiert</option><option value="modified" %3$s>Teilweise KI-modifiziert</option><option value="basic" %4$s>Grundlegendes KI-Symbol</option></select><p class="description">Orientiert sich an den EU-Icons zur Kennzeichnung von KI-generierten Inhalten.</p>', $post->ID, selected( $this->attachment_type( $post->ID ), 'generated', false ), selected( $this->attachment_type( $post->ID ), 'modified', false ), selected( $this->attachment_type( $post->ID ), 'basic', false ) ),
+		);
 		return $form_fields;
 	}
 
@@ -90,6 +97,8 @@ final class WKI_Plugin {
 		if ( isset( $attachment['wki_is_ai'] ) ) {
 			update_post_meta( $post['ID'], '_wki_is_ai', '1' );
 			update_post_meta( $post['ID'], '_wki_ai_source', 'manual' );
+			$type = sanitize_key( $attachment['wki_ai_type'] ?? 'generated' );
+			update_post_meta( $post['ID'], '_wki_ai_type', in_array( $type, array( 'generated', 'modified', 'basic' ), true ) ? $type : 'generated' );
 		} else {
 			update_post_meta( $post['ID'], '_wki_is_ai', '0' );
 			update_post_meta( $post['ID'], '_wki_ai_source', 'manual' );
@@ -128,6 +137,9 @@ final class WKI_Plugin {
 		if ( $matched ) {
 			update_post_meta( $attachment_id, '_wki_is_ai', '1' );
 			update_post_meta( $attachment_id, '_wki_ai_source', 'metadata' );
+			if ( ! get_post_meta( $attachment_id, '_wki_ai_type', true ) ) {
+				update_post_meta( $attachment_id, '_wki_ai_type', 'generated' );
+			}
 			update_post_meta( $attachment_id, '_wki_ai_matches', $matched );
 		}
 	}
@@ -149,6 +161,18 @@ final class WKI_Plugin {
 		return '1' === (string) get_post_meta( $attachment_id, '_wki_is_ai', true );
 	}
 
+	private function attachment_type( $attachment_id ) {
+		$type = get_post_meta( $attachment_id, '_wki_ai_type', true );
+		return in_array( $type, array( 'generated', 'modified', 'basic' ), true ) ? $type : 'generated';
+	}
+
+	private function icon_url( $attachment_id ) {
+		$settings = $this->settings();
+		$type = $this->attachment_type( $attachment_id );
+		$variant = $settings['icon_variant'];
+		return plugins_url( 'assets/eu-icons/ai-' . $type . '-' . $variant . '.svg', WKI_FILE );
+	}
+
 	public function image_attributes( $attr, $attachment, $size ) {
 		if ( $this->is_ai( $attachment->ID ) ) {
 			$attr['class'] = trim( ( $attr['class'] ?? '' ) . ' wki-ai-image' );
@@ -162,7 +186,7 @@ final class WKI_Plugin {
 			return $html;
 		}
 		$this->enqueue_frontend_style();
-		return '<span class="wki-ai-wrap">' . $html . $this->badge_markup() . '</span>';
+		return '<span class="wki-ai-wrap">' . $html . $this->badge_markup( $attachment_id ) . '</span>';
 	}
 
 	public function enqueue_frontend_style() {
@@ -172,10 +196,11 @@ final class WKI_Plugin {
 		wp_enqueue_style( 'wki-frontend' );
 	}
 
-	private function badge_markup() {
+	private function badge_markup( $attachment_id ) {
 		$settings = $this->settings();
 		$style = sprintf( '--wki-badge-font-size:%dpx;--wki-badge-padding:%dpx;', absint( $settings['badge_font_size'] ), absint( $settings['badge_padding'] ) );
-		return '<span class="wki-ai-badge wki-ai-badge--' . esc_attr( $settings['badge_position'] ) . '" style="' . esc_attr( $style ) . '">' . esc_html( $settings['badge_text'] ) . '</span>';
+		$label = esc_attr( $settings['badge_text'] );
+		return '<span class="wki-ai-badge wki-ai-badge--' . esc_attr( $settings['badge_position'] ) . '" style="' . esc_attr( $style ) . '" role="img" aria-label="' . $label . '"><img class="wki-ai-icon" src="' . esc_url( $this->icon_url( $attachment_id ) ) . '" alt="">' . esc_html( $settings['badge_text'] ) . '</span>';
 	}
 
 	public function background_shortcode( $atts ) {
@@ -189,7 +214,7 @@ final class WKI_Plugin {
 		$classes = trim( 'wki-ai-background ' . sanitize_html_class( $atts['class'] ) );
 		$height = '' !== $atts['height'] ? 'min-height:' . esc_attr( preg_replace( '/[^0-9.%a-zA-Z -]/', '', $atts['height'] ) ) . ';' : '';
 		$style = 'background-image:url("' . esc_url( $url ) . '");' . $height;
-		return '<span class="' . esc_attr( $classes ) . '" style="' . esc_attr( $style ) . '">' . $this->badge_markup() . '</span>';
+		return '<span class="' . esc_attr( $classes ) . '" style="' . esc_attr( $style ) . '">' . $this->badge_markup( $attachment_id ) . '</span>';
 	}
 
 	public function admin_menu() {
@@ -211,6 +236,7 @@ final class WKI_Plugin {
 				<tr><th scope="row"><label for="wki-badge-position">Badge-Position</label></th><td><select id="wki-badge-position" name="wki_settings[badge_position]"><option value="bottom-left" <?php selected( $settings['badge_position'], 'bottom-left' ); ?>>Unten links</option><option value="bottom-right" <?php selected( $settings['badge_position'], 'bottom-right' ); ?>>Unten rechts</option><option value="top-left" <?php selected( $settings['badge_position'], 'top-left' ); ?>>Oben links</option><option value="top-right" <?php selected( $settings['badge_position'], 'top-right' ); ?>>Oben rechts</option></select></td></tr>
 				<tr><th scope="row"><label for="wki-badge-font-size">Schriftgröße</label></th><td><input type="number" min="9" max="24" id="wki-badge-font-size" name="wki_settings[badge_font_size]" value="<?php echo esc_attr( $settings['badge_font_size'] ); ?>"> px</td></tr>
 				<tr><th scope="row"><label for="wki-badge-padding">Innenabstand</label></th><td><input type="number" min="2" max="20" id="wki-badge-padding" name="wki_settings[badge_padding]" value="<?php echo esc_attr( $settings['badge_padding'] ); ?>"> px</td></tr>
+				<tr><th scope="row"><label for="wki-icon-variant">EU-Icon-Variante</label></th><td><select id="wki-icon-variant" name="wki_settings[icon_variant]"><option value="black" <?php selected( $settings['icon_variant'], 'black' ); ?>>Schwarz</option><option value="black-transparent" <?php selected( $settings['icon_variant'], 'black-transparent' ); ?>>Schwarz, transparent</option><option value="white" <?php selected( $settings['icon_variant'], 'white' ); ?>>Weiß</option><option value="white-transparent" <?php selected( $settings['icon_variant'], 'white-transparent' ); ?>>Weiß, transparent</option></select><p class="description">Die offiziellen EU-Symbole werden zusammen mit einer verständlichen Textbeschriftung ausgegeben.</p></td></tr>
 			</table>
 			<?php submit_button( 'Einstellungen speichern' ); ?>
 		</form></div>

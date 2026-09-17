@@ -12,6 +12,8 @@ WordPress-Plugin zur manuellen und optional automatischen Kennzeichnung von KI-g
 - Optionales Frontend-Badge auf gekennzeichneten Bildern.
 - Responsive Badge-Positionierung ohne Herauslaufen auf kleinen Bildschirmen.
 - Shortcode für eindeutig zugeordnete Hintergrundbilder: `[wki_ai_background image_id="123"]`.
+- Offizielle EU-SVG-Symbole für grundlegende, vollständig generierte und teilweise modifizierte Inhalte.
+- Auswahl der vier offiziellen Icon-Varianten: schwarz, weiß und jeweils transparent.
 - Manuelle Kennzeichnungen haben Vorrang und werden von der automatischen Erkennung nicht überschrieben.
 
 ## Installation
@@ -28,6 +30,10 @@ Für ein als Hintergrund gestaltetes Bild kann der Shortcode verwendet werden. D
 Der optionale Parameter `class` kann eine zusätzliche CSS-Klasse für den Container setzen. Das Badge bleibt an den Container gebunden und wird auf kleinen Bildschirmen in Breite und Schriftgröße begrenzt.
 
 Die Metadatenerkennung ist eine unterstützende Heuristik. Fehlen entsprechende EXIF-, IPTC- oder XMP-Hinweise, kann ein Bild nicht zuverlässig automatisch als KI-generiert erkannt werden.
+
+Im Medien-Manager kann zusätzlich zwischen **vollständig KI-generiert**, **teilweise KI-modifiziert** und **grundlegendem KI-Symbol** gewählt werden. Das Plugin verwendet dafür die offiziellen, frei verfügbaren EU-SVG-Symbole und ergänzt sie um eine einfache Textbeschriftung sowie ein ARIA-Label.
+
+Die EU-Symbole sind ein technisches Kennzeichnungsmittel und stellen allein keine rechtliche Konformität nach dem KI-Gesetz her. Maßgeblich sind unter anderem Inhaltstyp, Veröffentlichungskontext und die jeweils geltenden Transparenzpflichten.
 
 Die Plugin-Einstellungen sind im WordPress-Hauptmenü unter **KI-Bildkennzeichnung** erreichbar. Das Frontend-Badge ist bei neuen Installationen standardmäßig aktiv und kann dort angepasst oder deaktiviert werden.
 

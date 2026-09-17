@@ -35,6 +35,16 @@
 	border-radius: 3px;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.wki-ai-icon {
+	display: block;
+	width: 1.35em;
+	height: 1.35em;
+	flex: 0 0 auto;
 }
 
 .wki-ai-badge--bottom-left { inset-inline-start: 8px; inset-block-end: 8px; }

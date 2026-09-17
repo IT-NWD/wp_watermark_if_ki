@@ -40,6 +40,7 @@ final class WKI_Plugin {
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_filter( 'wp_get_attachment_image_attributes', array( $this, 'image_attributes' ), 10, 3 );
 		add_filter( 'wp_get_attachment_image', array( $this, 'frontend_badge' ), 10, 5 );
+		add_shortcode( 'wki_ai_background', array( $this, 'background_shortcode' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_style' ) );
 	}
 
@@ -48,6 +49,9 @@ final class WKI_Plugin {
 			'auto_detect' => true,
 			'frontend_badge' => false,
 			'badge_text' => 'KI-generiertes Bild',
+			'badge_position' => 'bottom-left',
+			'badge_font_size' => 12,
+			'badge_padding' => 7,
 			'keywords' => "ai-generated\nartificial intelligence\ndall-e\ndalle\nmidjourney\nstable diffusion\nadobe firefly\ngenerative fill\ncomfyui",
 		);
 	}
@@ -66,6 +70,9 @@ final class WKI_Plugin {
 			'auto_detect' => ! empty( $input['auto_detect'] ),
 			'frontend_badge' => ! empty( $input['frontend_badge'] ),
 			'badge_text' => sanitize_text_field( $input['badge_text'] ?? $current['badge_text'] ),
+			'badge_position' => in_array( $input['badge_position'] ?? $current['badge_position'], array( 'bottom-left', 'bottom-right', 'top-left', 'top-right' ), true ) ? $input['badge_position'] : $current['badge_position'],
+			'badge_font_size' => max( 9, min( 24, absint( $input['badge_font_size'] ?? $current['badge_font_size'] ) ) ),
+			'badge_padding' => max( 2, min( 20, absint( $input['badge_padding'] ?? $current['badge_padding'] ) ) ),
 			'keywords' => sanitize_textarea_field( $input['keywords'] ?? $current['keywords'] ),
 		);
 	}
@@ -154,17 +161,35 @@ final class WKI_Plugin {
 		if ( ! $this->settings()['frontend_badge'] || ! $this->is_ai( $attachment_id ) ) {
 			return $html;
 		}
-		$text = esc_html( $this->settings()['badge_text'] );
-		return '<span class="wki-ai-wrap">' . $html . '<span class="wki-ai-badge">' . $text . '</span></span>';
+		$this->enqueue_frontend_style();
+		return '<span class="wki-ai-wrap">' . $html . $this->badge_markup() . '</span>';
 	}
 
 	public function enqueue_frontend_style() {
-		if ( ! $this->settings()['frontend_badge'] ) {
-			return;
+		if ( ! wp_style_is( 'wki-frontend', 'registered' ) ) {
+			wp_register_style( 'wki-frontend', plugins_url( 'assets/frontend.css', WKI_FILE ), array(), WKI_VERSION );
 		}
-		wp_register_style( 'wki-frontend', false, array(), WKI_VERSION );
 		wp_enqueue_style( 'wki-frontend' );
-		wp_add_inline_style( 'wki-frontend', '.wki-ai-wrap{display:inline-block;position:relative;line-height:0}.wki-ai-badge{position:absolute;left:8px;bottom:8px;padding:4px 7px;background:rgba(0,0,0,.78);color:#fff;font:600 12px/1.2 sans-serif;border-radius:3px;line-height:1.2}' );
+	}
+
+	private function badge_markup() {
+		$settings = $this->settings();
+		$style = sprintf( '--wki-badge-font-size:%dpx;--wki-badge-padding:%dpx;', absint( $settings['badge_font_size'] ), absint( $settings['badge_padding'] ) );
+		return '<span class="wki-ai-badge wki-ai-badge--' . esc_attr( $settings['badge_position'] ) . '" style="' . esc_attr( $style ) . '">' . esc_html( $settings['badge_text'] ) . '</span>';
+	}
+
+	public function background_shortcode( $atts ) {
+		$atts = shortcode_atts( array( 'image_id' => 0, 'class' => '', 'height' => '' ), $atts, 'wki_ai_background' );
+		$attachment_id = absint( $atts['image_id'] );
+		$url = $attachment_id ? wp_get_attachment_image_url( $attachment_id, 'full' ) : '';
+		if ( ! $url || ! $this->is_ai( $attachment_id ) ) {
+			return '';
+		}
+		$this->enqueue_frontend_style();
+		$classes = trim( 'wki-ai-background ' . sanitize_html_class( $atts['class'] ) );
+		$height = '' !== $atts['height'] ? 'min-height:' . esc_attr( preg_replace( '/[^0-9.%a-zA-Z -]/', '', $atts['height'] ) ) . ';' : '';
+		$style = 'background-image:url("' . esc_url( $url ) . '");' . $height;
+		return '<span class="' . esc_attr( $classes ) . '" style="' . esc_attr( $style ) . '">' . $this->badge_markup() . '</span>';
 	}
 
 	public function admin_menu() {
@@ -183,6 +208,9 @@ final class WKI_Plugin {
 				<tr><th scope="row"><label for="wki-keywords">Suchbegriffe</label></th><td><textarea class="large-text code" id="wki-keywords" name="wki_settings[keywords]" rows="8"><?php echo esc_textarea( $settings['keywords'] ); ?></textarea><p class="description">Ein Begriff pro Zeile, zum Beispiel „AI generated“, „Midjourney“ oder „Stable Diffusion“.</p></td></tr>
 				<tr><th scope="row">Frontend-Badge</th><td><label><input type="checkbox" name="wki_settings[frontend_badge]" value="1" <?php checked( $settings['frontend_badge'] ); ?>> KI-Hinweis auf gekennzeichneten Bildern anzeigen</label></td></tr>
 				<tr><th scope="row"><label for="wki-badge-text">Badge-Text</label></th><td><input class="regular-text" id="wki-badge-text" name="wki_settings[badge_text]" value="<?php echo esc_attr( $settings['badge_text'] ); ?>"></td></tr>
+				<tr><th scope="row"><label for="wki-badge-position">Badge-Position</label></th><td><select id="wki-badge-position" name="wki_settings[badge_position]"><option value="bottom-left" <?php selected( $settings['badge_position'], 'bottom-left' ); ?>>Unten links</option><option value="bottom-right" <?php selected( $settings['badge_position'], 'bottom-right' ); ?>>Unten rechts</option><option value="top-left" <?php selected( $settings['badge_position'], 'top-left' ); ?>>Oben links</option><option value="top-right" <?php selected( $settings['badge_position'], 'top-right' ); ?>>Oben rechts</option></select></td></tr>
+				<tr><th scope="row"><label for="wki-badge-font-size">Schriftgröße</label></th><td><input type="number" min="9" max="24" id="wki-badge-font-size" name="wki_settings[badge_font_size]" value="<?php echo esc_attr( $settings['badge_font_size'] ); ?>"> px</td></tr>
+				<tr><th scope="row"><label for="wki-badge-padding">Innenabstand</label></th><td><input type="number" min="2" max="20" id="wki-badge-padding" name="wki_settings[badge_padding]" value="<?php echo esc_attr( $settings['badge_padding'] ); ?>"> px</td></tr>
 			</table>
 			<?php submit_button( 'Einstellungen speichern' ); ?>
 		</form></div>

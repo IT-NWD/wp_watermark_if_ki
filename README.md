@@ -10,6 +10,8 @@ WordPress-Plugin zur manuellen und optional automatischen Kennzeichnung von KI-g
 - Prüfung von WordPress-Bildmetadaten sowie eingebetteten XMP-Daten.
 - Konfigurierbare Suchbegriffe, ein Begriff pro Zeile.
 - Optionales Frontend-Badge auf gekennzeichneten Bildern.
+- Responsive Badge-Positionierung ohne Herauslaufen auf kleinen Bildschirmen.
+- Shortcode für eindeutig zugeordnete Hintergrundbilder: `[wki_ai_background image_id="123"]`.
 - Manuelle Kennzeichnungen haben Vorrang und werden von der automatischen Erkennung nicht überschrieben.
 
 ## Installation
@@ -18,6 +20,12 @@ WordPress-Plugin zur manuellen und optional automatischen Kennzeichnung von KI-g
 2. Plugin aktivieren.
 3. Unter **Einstellungen → KI-Bildkennzeichnung** automatische Erkennung und Frontend-Badge konfigurieren.
 4. Ein Bild in der Mediathek öffnen und die Checkbox **Als KI-generiertes Bild kennzeichnen** setzen.
+
+Für ein als Hintergrund gestaltetes Bild kann der Shortcode verwendet werden. Die Bild-ID muss dabei zu einem als KI-Bild markierten Medienobjekt gehören:
+
+`[wki_ai_background image_id="123" height="320px"]`
+
+Der optionale Parameter `class` kann eine zusätzliche CSS-Klasse für den Container setzen. Das Badge bleibt an den Container gebunden und wird auf kleinen Bildschirmen in Breite und Schriftgröße begrenzt.
 
 Die Metadatenerkennung ist eine unterstützende Heuristik. Fehlen entsprechende EXIF-, IPTC- oder XMP-Hinweise, kann ein Bild nicht zuverlässig automatisch als KI-generiert erkannt werden.
 

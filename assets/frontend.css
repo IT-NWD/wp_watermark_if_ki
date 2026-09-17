@@ -37,14 +37,15 @@
 	white-space: nowrap;
 	display: inline-flex;
 	align-items: center;
-	gap: 5px;
+	gap: 0;
 }
 
 .wki-ai-icon {
 	display: block;
-	width: 1.35em;
-	height: 1.35em;
+	width: 1em;
+	height: 1em;
 	flex: 0 0 auto;
+	margin: 0;
 }
 
 .wki-ai-badge--bottom-left { inset-inline-start: 8px; inset-block-end: 8px; }

@@ -1,4 +1,4 @@
-# KI-Bildkennzeichnung
+# WPKI Kennzeichnung Plugin
 
 WordPress-Plugin zur manuellen und optional automatischen Kennzeichnung von KI-generierten Bildern.
 
@@ -24,7 +24,7 @@ WordPress-Plugin zur manuellen und optional automatischen Kennzeichnung von KI-g
 
 1. Plugin-ZIP unter **Plugins → Installieren → Plugin hochladen** installieren.
 2. Plugin aktivieren.
-3. Unter **KI-Bildkennzeichnung** im WordPress-Hauptmenü automatische Erkennung und Frontend-Badge konfigurieren.
+3. Unter **KI-Badge** im WordPress-Hauptmenü automatische Erkennung und Frontend-Badge konfigurieren.
 4. Ein Bild in der Mediathek öffnen und die Checkbox **Als KI-generiertes Bild kennzeichnen** setzen.
 
 Für ein als Hintergrund gestaltetes Bild kann der Shortcode verwendet werden. Die Bild-ID muss dabei zu einem als KI-Bild markierten Medienobjekt gehören:
@@ -39,7 +39,7 @@ Im Medien-Manager kann zusätzlich zwischen **vollständig KI-generiert**, **tei
 
 Die EU-Symbole sind ein technisches Kennzeichnungsmittel und stellen allein keine rechtliche Konformität nach dem KI-Gesetz her. Maßgeblich sind unter anderem Inhaltstyp, Veröffentlichungskontext und die jeweils geltenden Transparenzpflichten.
 
-Die Plugin-Einstellungen sind im WordPress-Hauptmenü unter **KI-Bildkennzeichnung** erreichbar. Das Frontend-Badge ist bei neuen Installationen standardmäßig aktiv und kann dort angepasst oder deaktiviert werden.
+Die Plugin-Einstellungen sind im WordPress-Hauptmenü unter **KI-Badge** erreichbar. Das Frontend-Badge ist bei neuen Installationen standardmäßig aktiv und kann dort angepasst oder deaktiviert werden.
 
 ## Technische Hinweise
 

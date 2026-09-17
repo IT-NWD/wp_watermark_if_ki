@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP KI-Badge Plugin
  * Description: Kennzeichnet KI-generierte Bilder im Medien-Manager und optional im Frontend.
- * Version: 0.3.8
+ * Version: 0.3.9
  * Author: IT-NWD
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WKI_VERSION', '0.3.8' );
+define( 'WKI_VERSION', '0.3.9' );
 define( 'WKI_FILE', __FILE__ );
 define( 'WKI_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -54,6 +54,9 @@ final class WKI_Plugin {
 			'badge_font_size' => 12,
 			'badge_padding' => 4,
 			'badge_opacity' => 78,
+			'font_family' => 'inherit',
+			'font_weight' => 600,
+			'text_color' => '#FFFFFF',
 			'icon_variant' => 'white-transparent',
 			'keywords' => "ai-generated\nartificial intelligence\ndall-e\ndalle\nmidjourney\nstable diffusion\nadobe firefly\ngenerative fill\ncomfyui",
 		);
@@ -63,12 +66,38 @@ final class WKI_Plugin {
 		return array_replace( $this->defaults(), get_option( $this->option_name, array() ) );
 	}
 
+	private function available_fonts() {
+		$fonts = array( 'inherit' => 'Theme/Avada', 'Arial, sans-serif' => 'Arial', 'Helvetica, sans-serif' => 'Helvetica', 'Verdana, sans-serif' => 'Verdana', 'Georgia, serif' => 'Georgia' );
+		$avada = get_option( 'fusion_options', array() );
+		$collect = function ( $value, $key = '' ) use ( &$collect, &$fonts ) {
+			if ( is_array( $value ) ) {
+				foreach ( $value as $child_key => $child_value ) {
+					$collect( $child_value, (string) $child_key );
+				}
+				return;
+			}
+			$key = strtolower( (string) $key );
+			if ( false === strpos( $key, 'font-family' ) && false === strpos( $key, 'font_family' ) ) {
+				return;
+			}
+			$font = trim( (string) $value );
+			if ( preg_match( '/^[\p{L}\d][\p{L}\d _-]*$/u', $font ) && 'inherit' !== strtolower( $font ) ) {
+				$fonts[ $font . ', sans-serif' ] = $font;
+			}
+		};
+		$collect( $avada );
+		return $fonts;
+	}
+
 	public function register_settings() {
 		register_setting( 'wki_settings_group', $this->option_name, array( $this, 'sanitize_settings' ) );
 	}
 
 	public function sanitize_settings( $input ) {
 		$current = $this->settings();
+		$allowed_fonts = array_keys( $this->available_fonts() );
+		$allowed_weights = array( 300, 400, 500, 600, 700 );
+		$font_weight = absint( $input['font_weight'] ?? $current['font_weight'] );
 		return array(
 			'auto_detect' => ! empty( $input['auto_detect'] ),
 			'frontend_badge' => ! empty( $input['frontend_badge'] ),
@@ -78,9 +107,16 @@ final class WKI_Plugin {
 			'badge_font_size' => max( 9, min( 24, absint( $input['badge_font_size'] ?? $current['badge_font_size'] ) ) ),
 			'badge_padding' => max( 2, min( 20, absint( $input['badge_padding'] ?? $current['badge_padding'] ) ) ),
 			'badge_opacity' => max( 0, min( 100, absint( $input['badge_opacity'] ?? $current['badge_opacity'] ) ) ),
+			'font_family' => in_array( $input['font_family'] ?? $current['font_family'], $allowed_fonts, true ) ? $input['font_family'] : $current['font_family'],
+			'font_weight' => in_array( $font_weight, $allowed_weights, true ) ? $font_weight : $current['font_weight'],
+			'text_color' => $this->sanitize_color( $input['text_color'] ?? $current['text_color'], $current['text_color'] ),
 			'icon_variant' => in_array( $input['icon_variant'] ?? $current['icon_variant'], array( 'black', 'black-transparent', 'white', 'white-transparent' ), true ) ? $input['icon_variant'] : $current['icon_variant'],
 			'keywords' => sanitize_textarea_field( $input['keywords'] ?? $current['keywords'] ),
 		);
+	}
+
+	private function sanitize_color( $color, $fallback ) {
+		return preg_match( '/^#[0-9a-fA-F]{6}$/', $color ) ? strtoupper( $color ) : $fallback;
 	}
 
 	public function media_field( $form_fields, $post ) {
@@ -252,7 +288,7 @@ final class WKI_Plugin {
 
 	private function badge_markup( $attachment_id ) {
 		$settings = $this->settings();
-		$style = sprintf( '--wki-badge-font-size:%dpx;--wki-badge-padding:%dpx;--wki-badge-opacity:%d%%;', absint( $settings['badge_font_size'] ), absint( $settings['badge_padding'] ), absint( $settings['badge_opacity'] ) );
+		$style = sprintf( '--wki-badge-font-family:%s;--wki-badge-font-size:%dpx;--wki-badge-font-weight:%d;--wki-badge-padding:%dpx;--wki-badge-opacity:%d%%;--wki-badge-text-color:%s;', esc_attr( $settings['font_family'] ), absint( $settings['badge_font_size'] ), absint( $settings['font_weight'] ), absint( $settings['badge_padding'] ), absint( $settings['badge_opacity'] ), esc_attr( $settings['text_color'] ) );
 		$label = esc_attr( $settings['badge_text'] );
 		$icon = $settings['show_icon'] ? '<img class="wki-ai-icon" src="' . esc_url( $this->icon_url( $attachment_id ) ) . '" alt="">' : '';
 		return '<span class="wki-ai-badge wki-ai-badge--' . esc_attr( $settings['badge_position'] ) . '" style="' . esc_attr( $style ) . '" role="img" aria-label="' . $label . '">' . $icon . esc_html( $settings['badge_text'] ) . '</span>';
@@ -293,6 +329,9 @@ final class WKI_Plugin {
 				<tr><th scope="row"><label for="wki-badge-font-size">Schriftgröße</label></th><td><input type="number" min="9" max="24" id="wki-badge-font-size" name="wki_settings[badge_font_size]" value="<?php echo esc_attr( $settings['badge_font_size'] ); ?>"> px</td></tr>
 				<tr><th scope="row"><label for="wki-badge-padding">Innenabstand</label></th><td><input type="number" min="2" max="20" id="wki-badge-padding" name="wki_settings[badge_padding]" value="<?php echo esc_attr( $settings['badge_padding'] ); ?>"> px</td></tr>
 				<tr><th scope="row"><label for="wki-badge-opacity">Transparenz</label></th><td><input type="number" min="0" max="100" id="wki-badge-opacity" name="wki_settings[badge_opacity]" value="<?php echo esc_attr( $settings['badge_opacity'] ); ?>"> % Deckkraft <p class="description">0 % = unsichtbar, 100 % = vollständig deckend.</p></td></tr>
+				<?php $font_options = $this->available_fonts(); ?><tr><th scope="row"><label for="wki-font-family">Schriftfamilie</label></th><td><select id="wki-font-family" name="wki_settings[font_family]"><?php foreach ( $font_options as $value => $label ) : ?><option value="<?php echo esc_attr( $value ); ?>" <?php selected( $settings['font_family'], $value ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select><p class="description">Avada-Schriftarten werden automatisch aus den Theme-Einstellungen übernommen.</p></td></tr>
+				<tr><th scope="row"><label for="wki-font-weight">Schriftstärke</label></th><td><select id="wki-font-weight" name="wki_settings[font_weight]"><?php foreach ( array( 300 => 'Leicht', 400 => 'Normal', 500 => 'Medium', 600 => 'Halbfett', 700 => 'Fett' ) as $value => $label ) : ?><option value="<?php echo esc_attr( $value ); ?>" <?php selected( $settings['font_weight'], $value ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select></td></tr>
+				<tr><th scope="row"><label for="wki-text-color">Schriftfarbe</label></th><td><input id="wki-text-color" type="color" name="wki_settings[text_color]" value="<?php echo esc_attr( $settings['text_color'] ); ?>"></td></tr>
 				<tr><th scope="row"><label for="wki-icon-variant">EU-Icon-Variante</label></th><td><select id="wki-icon-variant" name="wki_settings[icon_variant]"><option value="black" <?php selected( $settings['icon_variant'], 'black' ); ?>>Schwarz</option><option value="black-transparent" <?php selected( $settings['icon_variant'], 'black-transparent' ); ?>>Schwarz, transparent</option><option value="white" <?php selected( $settings['icon_variant'], 'white' ); ?>>Weiß</option><option value="white-transparent" <?php selected( $settings['icon_variant'], 'white-transparent' ); ?>>Weiß, transparent</option></select><p class="description">Die offiziellen EU-Symbole werden zusammen mit einer verständlichen Textbeschriftung ausgegeben.</p></td></tr>
 			</table>
 			<?php submit_button( 'Einstellungen speichern' ); ?>

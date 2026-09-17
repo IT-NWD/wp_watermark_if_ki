@@ -31,8 +31,11 @@
 	overflow: hidden;
 	padding: var(--wki-badge-padding, 4px);
 	background: rgba(0, 0, 0, var(--wki-badge-opacity, 78%));
-	color: #fff;
-	font: 600 var(--wki-badge-font-size, 12px)/1.2 sans-serif;
+	color: var(--wki-badge-text-color, #fff);
+	font-family: var(--wki-badge-font-family, sans-serif);
+	font-size: var(--wki-badge-font-size, 12px);
+	font-weight: var(--wki-badge-font-weight, 600);
+	line-height: 1.2;
 	border-radius: 3px;
 	text-overflow: ellipsis;
 	white-space: nowrap;

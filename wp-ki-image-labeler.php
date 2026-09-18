@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP KI-Badge Plugin
  * Description: Kennzeichnet KI-generierte Bilder im Medien-Manager und optional im Frontend.
- * Version: 0.5.2
+ * Version: 0.5.3
  * Author: IT-NWD
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WKI_VERSION', '0.5.2' );
+define( 'WKI_VERSION', '0.5.3' );
 define( 'WKI_FILE', __FILE__ );
 define( 'WKI_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -394,7 +394,7 @@ final class WKI_Plugin {
 				<tr><th scope="row"><label for="wki-badge-text">Badge-Text</label></th><td><input class="regular-text" id="wki-badge-text" name="wki_settings[badge_text]" value="<?php echo esc_attr( $settings['badge_text'] ); ?>"></td></tr>
 				<tr><th scope="row">AI-Logo</th><td><label><input type="checkbox" name="wki_settings[show_icon]" value="1" <?php checked( $settings['show_icon'] ); ?>> Kleines AI-Logo anzeigen</label><p class="description">Optional. Der Text bleibt auch ohne Logo sichtbar.</p></td></tr>
 				<tr><th scope="row"><label for="wki-logo-size">Logo-Größe</label></th><td><input type="number" min="8" max="48" id="wki-logo-size" name="wki_settings[logo_size]" value="<?php echo esc_attr( $settings['logo_size'] ); ?>"> px <p class="description">Beim Überfahren des Badges wird das gewählte EU-Symbol angezeigt.</p></td></tr>
-				<tr><th scope="row"><label for="wki-logo-hover-size">Logo-Größe bei Hover</label></th><td><input type="number" min="12" max="96" id="wki-logo-hover-size" name="wki_settings[logo_hover_size]" value="<?php echo esc_attr( $settings['logo_hover_size'] ); ?>"> px</td></tr>
+				<tr><th scope="row"><label for="wki-logo-hover-size">Logo-Höhe bei Hover</label></th><td><input type="number" min="12" max="96" id="wki-logo-hover-size" name="wki_settings[logo_hover_size]" value="<?php echo esc_attr( $settings['logo_hover_size'] ); ?>"> px <p class="description">Bestimmt die sichtbare Höhe des breiten EU-Typ-Logos.</p></td></tr>
 				<tr><th scope="row"><label for="wki-badge-position">Badge-Position</label></th><td><select id="wki-badge-position" name="wki_settings[badge_position]"><option value="bottom-left" <?php selected( $settings['badge_position'], 'bottom-left' ); ?>>Unten links</option><option value="bottom-right" <?php selected( $settings['badge_position'], 'bottom-right' ); ?>>Unten rechts</option><option value="top-left" <?php selected( $settings['badge_position'], 'top-left' ); ?>>Oben links</option><option value="top-right" <?php selected( $settings['badge_position'], 'top-right' ); ?>>Oben rechts</option></select></td></tr>
 				<tr><th scope="row"><label for="wki-badge-font-size">Schriftgröße</label></th><td><input type="number" min="9" max="24" id="wki-badge-font-size" name="wki_settings[badge_font_size]" value="<?php echo esc_attr( $settings['badge_font_size'] ); ?>"> px</td></tr>
 				<tr><th scope="row"><label for="wki-badge-padding">Innenabstand</label></th><td><input type="number" min="2" max="20" id="wki-badge-padding" name="wki_settings[badge_padding]" value="<?php echo esc_attr( $settings['badge_padding'] ); ?>"> px</td></tr>

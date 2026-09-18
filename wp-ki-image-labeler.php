@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP KI-Badge Plugin
  * Description: Kennzeichnet KI-generierte Bilder im Medien-Manager und optional im Frontend.
- * Version: 0.4.2
+ * Version: 0.4.3
  * Author: IT-NWD
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WKI_VERSION', '0.4.2' );
+define( 'WKI_VERSION', '0.4.3' );
 define( 'WKI_FILE', __FILE__ );
 define( 'WKI_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -77,6 +77,9 @@ final class WKI_Plugin {
 			return true;
 		}
 		if ( has_filter( 'fusion_builder_live_request' ) && apply_filters( 'fusion_builder_live_request', false ) ) {
+			return true;
+		}
+		if ( isset( $_POST['model'] ) && is_user_logged_in() && current_user_can( 'edit_posts' ) ) {
 			return true;
 		}
 		$editor_parameters = array( 'fb-edit', 'fb_live_editor', 'fusion_builder', 'fusion_builder_live', 'fusion-builder' );
@@ -269,6 +272,12 @@ final class WKI_Plugin {
 		if ( $this->is_editor_context() ) {
 			return $html;
 		}
+		$protected = array();
+		$html = preg_replace_callback( '/<(script|style)\\b[^>]*>.*?<\\/\\1>/is', function ( $match ) use ( &$protected ) {
+			$key = '<!-- WKI-PROTECTED-' . count( $protected ) . ' -->';
+			$protected[ $key ] = $match[0];
+			return $key;
+		}, $html );
 		$html = preg_replace_callback( '/<img\\b[^>]*>/i', function ( $match ) {
 			$attachment_id = 0;
 			if ( preg_match( '/\\bwp-image-(\\d+)\\b/i', $match[0], $id_match ) ) {
@@ -281,7 +290,7 @@ final class WKI_Plugin {
 			}
 			return '<span class="wki-ai-wrap">' . $match[0] . $this->badge_markup( $attachment_id ) . '</span>';
 		}, $html );
-		return preg_replace_callback( '/<[a-z][^>]*\\bdata-bg(?:-url)?=["\']([^"\']+)["\'][^>]*>/i', function ( $match ) {
+		$html = preg_replace_callback( '/<[a-z][^>]*\\bdata-bg(?:-url)?=["\']([^"\']+)["\'][^>]*>/i', function ( $match ) {
 			$attachment_id = $this->attachment_id_from_url( html_entity_decode( $match[1] ) );
 			if ( ! $this->is_ai( $attachment_id ) ) {
 				return $match[0];
@@ -292,6 +301,7 @@ final class WKI_Plugin {
 			}
 			return $tag . $this->badge_markup( $attachment_id );
 		}, $html );
+		return strtr( $html, $protected );
 	}
 
 	private function attachment_id_from_url( $url ) {

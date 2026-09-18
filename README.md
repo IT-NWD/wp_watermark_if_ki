@@ -19,7 +19,7 @@ WordPress-Plugin zur manuellen und optional automatischen Kennzeichnung von KI-g
 - Avada-Live-Editor-Erkennung: Im Builder werden keine Badge-Markups oder Output-Buffer-Manipulationen ausgeführt.
 - Allgemeines EU-`AI`-Symbol mit optionalem Wechsel zum gewählten Typ-Symbol bei Mouseover.
 - Reguläre Alt-Texte werden beim manuellen Kennzeichnen automatisch ergänzt, wenn noch kein eigener Alt-Text vorhanden ist.
-- Vergrößerbare Hover-Darstellung des EU-Logos mit eigener Größeneinstellung.
+- Vergrößerbare Hover-Darstellung des EU-Logos mit eigener Größeneinstellung, ohne Verschieben des Badge-Texts.
 - Auswahl der vier offiziellen Icon-Varianten: schwarz, weiß und jeweils transparent.
 - Erfassung regulärer WordPress-Bilder und direkt von Avada ausgegebener Image-Elemente über die Attachment-Klasse.
 - Erfassung von Avada-Container-Hintergründen über `data-bg` und `data-bg-url`.

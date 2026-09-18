@@ -44,6 +44,9 @@
 	gap: 0;
 }
 
+.wki-ai-badge:hover,
+.wki-ai-badge:focus-within { overflow: visible; }
+
 .wki-ai-icon {
 	display: block;
 	width: var(--wki-badge-logo-size, 16px);
@@ -51,6 +54,7 @@
 	object-fit: contain;
 	flex: 0 0 auto;
 	margin: 0;
+	transition: width .15s ease, height .15s ease, inset .15s ease, transform .15s ease;
 }
 
 .wki-ai-logo {
@@ -59,7 +63,6 @@
 	width: var(--wki-badge-logo-size, 16px);
 	height: var(--wki-badge-logo-size, 16px);
 	flex: 0 0 auto;
-	transition: width .15s ease, height .15s ease;
 }
 
 .wki-ai-logo .wki-ai-icon { position: absolute; inset: 0; }
@@ -68,10 +71,14 @@
 .wki-ai-badge:focus-within .wki-ai-icon--general { display: none; }
 .wki-ai-badge:hover .wki-ai-icon--specific,
 .wki-ai-badge:focus-within .wki-ai-icon--specific { display: block; }
-.wki-ai-badge:hover .wki-ai-logo,
-.wki-ai-badge:focus-within .wki-ai-logo {
+
+.wki-ai-badge:hover .wki-ai-icon--specific,
+.wki-ai-badge:focus-within .wki-ai-icon--specific {
 	width: var(--wki-badge-logo-hover-size, 30px);
 	height: var(--wki-badge-logo-hover-size, 30px);
+	inset: 50% auto auto 50%;
+	transform: translate(-50%, -50%);
+	z-index: 2;
 }
 
 .wki-ai-badge--bottom-left { inset-inline-start: 8px; inset-block-end: 8px; }

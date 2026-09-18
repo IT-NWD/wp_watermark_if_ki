@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP KI-Badge Plugin
  * Description: Kennzeichnet KI-generierte Bilder im Medien-Manager und optional im Frontend.
- * Version: 0.3.9
+ * Version: 0.4.0
  * Author: IT-NWD
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WKI_VERSION', '0.3.9' );
+define( 'WKI_VERSION', '0.4.0' );
 define( 'WKI_FILE', __FILE__ );
 define( 'WKI_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -64,6 +64,20 @@ final class WKI_Plugin {
 
 	private function settings() {
 		return array_replace( $this->defaults(), get_option( $this->option_name, array() ) );
+	}
+
+	private function is_editor_context() {
+		$editor_parameters = array( 'fb-edit', 'fb_live_editor', 'fusion_builder', 'fusion_builder_live', 'fusion-builder' );
+		foreach ( $editor_parameters as $parameter ) {
+			if ( isset( $_GET[ $parameter ] ) || isset( $_POST[ $parameter ] ) ) {
+				return true;
+			}
+		}
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+		if ( preg_match( '/(?:fb-edit|fb_live_editor|fusion_builder|fusion-builder)/i', $request_uri ) ) {
+			return true;
+		}
+		return (bool) apply_filters( 'wki_is_editor_context', false );
 	}
 
 	private function available_fonts() {
@@ -213,7 +227,7 @@ final class WKI_Plugin {
 	}
 
 	public function image_attributes( $attr, $attachment, $size ) {
-		if ( $this->is_ai( $attachment->ID ) ) {
+		if ( ! $this->is_editor_context() && $this->is_ai( $attachment->ID ) ) {
 			$attr['class'] = trim( ( $attr['class'] ?? '' ) . ' wki-ai-image' );
 			$attr['data-wki-ai'] = 'true';
 			$attr['data-wki-attachment'] = (string) $attachment->ID;
@@ -222,7 +236,7 @@ final class WKI_Plugin {
 	}
 
 	public function frontend_badge( $html, $attachment_id, $size, $icon, $attr ) {
-		if ( ! $this->settings()['frontend_badge'] || ! $this->is_ai( $attachment_id ) ) {
+		if ( $this->is_editor_context() || ! $this->settings()['frontend_badge'] || ! $this->is_ai( $attachment_id ) ) {
 			return $html;
 		}
 		$this->enqueue_frontend_style();
@@ -230,13 +244,16 @@ final class WKI_Plugin {
 	}
 
 	public function start_frontend_buffer() {
-		if ( is_admin() || wp_doing_ajax() || ! $this->settings()['frontend_badge'] ) {
+		if ( $this->is_editor_context() || is_admin() || wp_doing_ajax() || ! $this->settings()['frontend_badge'] ) {
 			return;
 		}
 		ob_start( array( $this, 'filter_frontend_html' ) );
 	}
 
 	public function filter_frontend_html( $html ) {
+		if ( $this->is_editor_context() ) {
+			return $html;
+		}
 		$html = preg_replace_callback( '/<img\\b[^>]*>/i', function ( $match ) {
 			$attachment_id = 0;
 			if ( preg_match( '/\\bwp-image-(\\d+)\\b/i', $match[0], $id_match ) ) {
@@ -280,6 +297,9 @@ final class WKI_Plugin {
 	}
 
 	public function enqueue_frontend_style() {
+		if ( $this->is_editor_context() ) {
+			return;
+		}
 		if ( ! wp_style_is( 'wki-frontend', 'registered' ) ) {
 			wp_register_style( 'wki-frontend', plugins_url( 'assets/frontend.css', WKI_FILE ), array(), WKI_VERSION );
 		}
@@ -295,6 +315,9 @@ final class WKI_Plugin {
 	}
 
 	public function background_shortcode( $atts ) {
+		if ( $this->is_editor_context() ) {
+			return '';
+		}
 		$atts = shortcode_atts( array( 'image_id' => 0, 'class' => '', 'height' => '' ), $atts, 'wki_ai_background' );
 		$attachment_id = absint( $atts['image_id'] );
 		$url = $attachment_id ? wp_get_attachment_image_url( $attachment_id, 'full' ) : '';

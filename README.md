@@ -16,6 +16,7 @@ WordPress-Plugin zur manuellen und optional automatischen Kennzeichnung von KI-g
 - AI-Logo im Badge optional ein- und ausschaltbar.
 - Kompakte Box mit einstellbarem Innenabstand und einstellbarer Transparenz.
 - Schriftfamilie, Schriftstärke und Schriftfarbe des Badges konfigurierbar.
+- Avada-Live-Editor-Erkennung: Im Builder werden keine Badge-Markups oder Output-Buffer-Manipulationen ausgeführt.
 - Auswahl der vier offiziellen Icon-Varianten: schwarz, weiß und jeweils transparent.
 - Erfassung regulärer WordPress-Bilder und direkt von Avada ausgegebener Image-Elemente über die Attachment-Klasse.
 - Erfassung von Avada-Container-Hintergründen über `data-bg` und `data-bg-url`.

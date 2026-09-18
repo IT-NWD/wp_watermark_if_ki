@@ -98,6 +98,17 @@
 	transform: translateY(-50%);
 }
 
+/* Avada zoom hovers target every descendant img, including badge icons. */
+.fusion-image-hovers .hover-type-zoomin:hover .wki-ai-badge .wki-ai-icon,
+.fusion-image-hovers .hover-type-zoomin.hover .wki-ai-badge .wki-ai-icon {
+	opacity: 1;
+}
+
+.fusion-image-hovers .hover-type-zoomin:hover .wki-ai-badge .wki-ai-icon--specific,
+.fusion-image-hovers .hover-type-zoomin.hover .wki-ai-badge .wki-ai-icon--specific {
+	transform: translateY(-50%);
+}
+
 .wki-ai-badge--bottom-left { inset-inline-start: 8px; inset-block-end: 8px; }
 .wki-ai-badge--bottom-right { inset-inline-end: 8px; inset-block-end: 8px; }
 .wki-ai-badge--top-left { inset-inline-start: 8px; inset-block-start: 8px; }

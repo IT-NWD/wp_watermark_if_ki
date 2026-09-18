@@ -17,6 +17,7 @@ WordPress-Plugin zur manuellen und optional automatischen Kennzeichnung von KI-g
 - Kompakte Box mit einstellbarem Innenabstand und einstellbarer Transparenz.
 - Schriftfamilie, Schriftstärke und Schriftfarbe des Badges konfigurierbar.
 - Avada-Live-Editor-Erkennung: Im Builder werden keine Badge-Markups oder Output-Buffer-Manipulationen ausgeführt.
+- Avada-Bildzooms bleiben auf das Inhaltsbild begrenzt und verändern die Badge-Logos nicht.
 - Allgemeines EU-`AI`-Symbol mit optionalem Wechsel zum gewählten Typ-Symbol bei Mouseover.
 - Reguläre Alt-Texte werden beim manuellen Kennzeichnen automatisch ergänzt, wenn noch kein eigener Alt-Text vorhanden ist.
 - Vergrößerbare Hover-Darstellung des breiten EU-Typ-Logos mit einstellbarer sichtbarer Höhe und festem vertikalem Mittelpunkt.

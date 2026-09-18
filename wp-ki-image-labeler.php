@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP KI-Badge Plugin
  * Description: Kennzeichnet KI-generierte Bilder im Medien-Manager und optional im Frontend.
- * Version: 0.4.1
+ * Version: 0.4.2
  * Author: IT-NWD
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WKI_VERSION', '0.4.1' );
+define( 'WKI_VERSION', '0.4.2' );
 define( 'WKI_FILE', __FILE__ );
 define( 'WKI_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -67,6 +67,18 @@ final class WKI_Plugin {
 	}
 
 	private function is_editor_context() {
+		if ( function_exists( 'fusion_is_builder_frame' ) && fusion_is_builder_frame() ) {
+			return true;
+		}
+		if ( function_exists( 'fusion_is_preview_frame' ) && fusion_is_preview_frame() ) {
+			return true;
+		}
+		if ( function_exists( 'is_preview_only' ) && is_preview_only() ) {
+			return true;
+		}
+		if ( has_filter( 'fusion_builder_live_request' ) && apply_filters( 'fusion_builder_live_request', false ) ) {
+			return true;
+		}
 		$editor_parameters = array( 'fb-edit', 'fb_live_editor', 'fusion_builder', 'fusion_builder_live', 'fusion-builder' );
 		foreach ( $editor_parameters as $parameter ) {
 			if ( isset( $_GET[ $parameter ] ) || isset( $_POST[ $parameter ] ) ) {

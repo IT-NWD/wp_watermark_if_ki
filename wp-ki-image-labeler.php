@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP KI-Badge Plugin
  * Description: Kennzeichnet KI-generierte Bilder im Medien-Manager und optional im Frontend.
- * Version: 0.4.3
+ * Version: 0.5.0
  * Author: IT-NWD
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WKI_VERSION', '0.4.3' );
+define( 'WKI_VERSION', '0.5.0' );
 define( 'WKI_FILE', __FILE__ );
 define( 'WKI_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -49,7 +49,8 @@ final class WKI_Plugin {
 			'auto_detect' => true,
 			'frontend_badge' => true,
 			'badge_text' => 'KI-generiert',
-			'show_icon' => false,
+			'show_icon' => true,
+			'logo_size' => 16,
 			'badge_position' => 'bottom-left',
 			'badge_font_size' => 12,
 			'badge_padding' => 4,
@@ -132,6 +133,7 @@ final class WKI_Plugin {
 			'frontend_badge' => ! empty( $input['frontend_badge'] ),
 			'badge_text' => sanitize_text_field( $input['badge_text'] ?? $current['badge_text'] ),
 			'show_icon' => ! empty( $input['show_icon'] ),
+			'logo_size' => max( 8, min( 48, absint( $input['logo_size'] ?? $current['logo_size'] ) ) ),
 			'badge_position' => in_array( $input['badge_position'] ?? $current['badge_position'], array( 'bottom-left', 'bottom-right', 'top-left', 'top-right' ), true ) ? $input['badge_position'] : $current['badge_position'],
 			'badge_font_size' => max( 9, min( 24, absint( $input['badge_font_size'] ?? $current['badge_font_size'] ) ) ),
 			'badge_padding' => max( 2, min( 20, absint( $input['badge_padding'] ?? $current['badge_padding'] ) ) ),
@@ -167,15 +169,24 @@ final class WKI_Plugin {
 			return $post;
 		}
 		if ( isset( $attachment['wki_is_ai'] ) ) {
+			$type = sanitize_key( $attachment['wki_ai_type'] ?? 'generated' );
+			$type = in_array( $type, array( 'generated', 'modified', 'basic' ), true ) ? $type : 'generated';
 			update_post_meta( $post['ID'], '_wki_is_ai', '1' );
 			update_post_meta( $post['ID'], '_wki_ai_source', 'manual' );
-			$type = sanitize_key( $attachment['wki_ai_type'] ?? 'generated' );
-			update_post_meta( $post['ID'], '_wki_ai_type', in_array( $type, array( 'generated', 'modified', 'basic' ), true ) ? $type : 'generated' );
+			update_post_meta( $post['ID'], '_wki_ai_type', $type );
+			if ( '' === trim( (string) get_post_meta( $post['ID'], '_wp_attachment_image_alt', true ) ) ) {
+				update_post_meta( $post['ID'], '_wp_attachment_image_alt', $this->default_alt_text( $type ) );
+			}
 		} else {
 			update_post_meta( $post['ID'], '_wki_is_ai', '0' );
 			update_post_meta( $post['ID'], '_wki_ai_source', 'manual' );
 		}
 		return $post;
+	}
+
+	private function default_alt_text( $type ) {
+		$labels = array( 'generated' => 'KI-generiertes Bild', 'modified' => 'Teilweise KI-modifiziertes Bild', 'basic' => 'KI-gekennzeichnetes Bild' );
+		return $labels[ $type ] ?? $labels['generated'];
 	}
 
 	public function media_column( $columns ) {
@@ -242,6 +253,13 @@ final class WKI_Plugin {
 		$settings = $this->settings();
 		$variant = $settings['icon_variant'];
 		return plugins_url( 'assets/eu-icons/ai-basic-' . $variant . '.svg', WKI_FILE );
+	}
+
+	private function type_icon_url( $attachment_id ) {
+		$settings = $this->settings();
+		$type = $this->attachment_type( $attachment_id );
+		$variant = $settings['icon_variant'];
+		return plugins_url( 'assets/eu-icons/ai-' . $type . '-' . $variant . '.svg', WKI_FILE );
 	}
 
 	public function image_attributes( $attr, $attachment, $size ) {
@@ -333,9 +351,9 @@ final class WKI_Plugin {
 
 	private function badge_markup( $attachment_id ) {
 		$settings = $this->settings();
-		$style = sprintf( '--wki-badge-font-family:%s;--wki-badge-font-size:%dpx;--wki-badge-font-weight:%d;--wki-badge-padding:%dpx;--wki-badge-opacity:%d%%;--wki-badge-text-color:%s;', esc_attr( $settings['font_family'] ), absint( $settings['badge_font_size'] ), absint( $settings['font_weight'] ), absint( $settings['badge_padding'] ), absint( $settings['badge_opacity'] ), esc_attr( $settings['text_color'] ) );
+		$style = sprintf( '--wki-badge-font-family:%s;--wki-badge-font-size:%dpx;--wki-badge-font-weight:%d;--wki-badge-padding:%dpx;--wki-badge-opacity:%d%%;--wki-badge-text-color:%s;--wki-badge-logo-size:%dpx;', esc_attr( $settings['font_family'] ), absint( $settings['badge_font_size'] ), absint( $settings['font_weight'] ), absint( $settings['badge_padding'] ), absint( $settings['badge_opacity'] ), esc_attr( $settings['text_color'] ), absint( $settings['logo_size'] ) );
 		$label = esc_attr( $settings['badge_text'] );
-		$icon = $settings['show_icon'] ? '<img class="wki-ai-icon" src="' . esc_url( $this->icon_url( $attachment_id ) ) . '" alt="">' : '';
+		$icon = $settings['show_icon'] ? '<span class="wki-ai-logo" aria-hidden="true"><img class="wki-ai-icon wki-ai-icon--general" src="' . esc_url( $this->icon_url( $attachment_id ) ) . '" alt=""><img class="wki-ai-icon wki-ai-icon--specific" src="' . esc_url( $this->type_icon_url( $attachment_id ) ) . '" alt=""></span>' : '';
 		return '<span class="wki-ai-badge wki-ai-badge--' . esc_attr( $settings['badge_position'] ) . '" style="' . esc_attr( $style ) . '" role="img" aria-label="' . $label . '">' . $icon . esc_html( $settings['badge_text'] ) . '</span>';
 	}
 
@@ -373,6 +391,7 @@ final class WKI_Plugin {
 				<tr><th scope="row">Frontend-Badge</th><td><label><input type="checkbox" name="wki_settings[frontend_badge]" value="1" <?php checked( $settings['frontend_badge'] ); ?>> KI-Hinweis auf gekennzeichneten Bildern anzeigen</label></td></tr>
 				<tr><th scope="row"><label for="wki-badge-text">Badge-Text</label></th><td><input class="regular-text" id="wki-badge-text" name="wki_settings[badge_text]" value="<?php echo esc_attr( $settings['badge_text'] ); ?>"></td></tr>
 				<tr><th scope="row">AI-Logo</th><td><label><input type="checkbox" name="wki_settings[show_icon]" value="1" <?php checked( $settings['show_icon'] ); ?>> Kleines AI-Logo anzeigen</label><p class="description">Optional. Der Text bleibt auch ohne Logo sichtbar.</p></td></tr>
+				<tr><th scope="row"><label for="wki-logo-size">Logo-Größe</label></th><td><input type="number" min="8" max="48" id="wki-logo-size" name="wki_settings[logo_size]" value="<?php echo esc_attr( $settings['logo_size'] ); ?>"> px <p class="description">Beim Überfahren des Badges wird das gewählte EU-Symbol angezeigt.</p></td></tr>
 				<tr><th scope="row"><label for="wki-badge-position">Badge-Position</label></th><td><select id="wki-badge-position" name="wki_settings[badge_position]"><option value="bottom-left" <?php selected( $settings['badge_position'], 'bottom-left' ); ?>>Unten links</option><option value="bottom-right" <?php selected( $settings['badge_position'], 'bottom-right' ); ?>>Unten rechts</option><option value="top-left" <?php selected( $settings['badge_position'], 'top-left' ); ?>>Oben links</option><option value="top-right" <?php selected( $settings['badge_position'], 'top-right' ); ?>>Oben rechts</option></select></td></tr>
 				<tr><th scope="row"><label for="wki-badge-font-size">Schriftgröße</label></th><td><input type="number" min="9" max="24" id="wki-badge-font-size" name="wki_settings[badge_font_size]" value="<?php echo esc_attr( $settings['badge_font_size'] ); ?>"> px</td></tr>
 				<tr><th scope="row"><label for="wki-badge-padding">Innenabstand</label></th><td><input type="number" min="2" max="20" id="wki-badge-padding" name="wki_settings[badge_padding]" value="<?php echo esc_attr( $settings['badge_padding'] ); ?>"> px</td></tr>

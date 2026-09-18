@@ -46,11 +46,27 @@
 
 .wki-ai-icon {
 	display: block;
-	width: 1em;
-	height: 1em;
+	width: var(--wki-badge-logo-size, 16px);
+	height: var(--wki-badge-logo-size, 16px);
+	object-fit: contain;
 	flex: 0 0 auto;
 	margin: 0;
 }
+
+.wki-ai-logo {
+	display: inline-flex;
+	position: relative;
+	width: var(--wki-badge-logo-size, 16px);
+	height: var(--wki-badge-logo-size, 16px);
+	flex: 0 0 auto;
+}
+
+.wki-ai-logo .wki-ai-icon { position: absolute; inset: 0; }
+.wki-ai-logo .wki-ai-icon--specific { display: none; }
+.wki-ai-badge:hover .wki-ai-icon--general,
+.wki-ai-badge:focus-within .wki-ai-icon--general { display: none; }
+.wki-ai-badge:hover .wki-ai-icon--specific,
+.wki-ai-badge:focus-within .wki-ai-icon--specific { display: block; }
 
 .wki-ai-badge--bottom-left { inset-inline-start: 8px; inset-block-end: 8px; }
 .wki-ai-badge--bottom-right { inset-inline-end: 8px; inset-block-end: 8px; }

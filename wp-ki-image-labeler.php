@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP KI-Badge Plugin
  * Description: Kennzeichnet KI-generierte Bilder im Medien-Manager und optional im Frontend.
- * Version: 0.5.6
+ * Version: 0.6.0
  * Author: IT-NWD
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WKI_VERSION', '0.5.6' );
+define( 'WKI_VERSION', '0.6.0' );
 define( 'WKI_FILE', __FILE__ );
 define( 'WKI_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -143,7 +143,7 @@ final class WKI_Plugin {
 			'font_family' => in_array( $input['font_family'] ?? $current['font_family'], $allowed_fonts, true ) ? $input['font_family'] : $current['font_family'],
 			'font_weight' => in_array( $font_weight, $allowed_weights, true ) ? $font_weight : $current['font_weight'],
 			'text_color' => $this->sanitize_color( $input['text_color'] ?? $current['text_color'], $current['text_color'] ),
-			'icon_variant' => in_array( $input['icon_variant'] ?? $current['icon_variant'], array( 'black', 'black-transparent', 'white', 'white-transparent' ), true ) ? $input['icon_variant'] : $current['icon_variant'],
+			'icon_variant' => in_array( $input['icon_variant'] ?? $current['icon_variant'], array( 'auto', 'auto-transparent', 'black', 'black-transparent', 'white', 'white-transparent' ), true ) ? $input['icon_variant'] : $current['icon_variant'],
 			'keywords' => sanitize_textarea_field( $input['keywords'] ?? $current['keywords'] ),
 		);
 	}
@@ -251,16 +251,162 @@ final class WKI_Plugin {
 		return in_array( $type, array( 'generated', 'modified', 'basic' ), true ) ? $type : 'generated';
 	}
 
-	private function icon_url( $attachment_id ) {
+	private function resolved_icon_variant( $attachment_id ) {
 		$settings = $this->settings();
 		$variant = $settings['icon_variant'];
+		if ( ! in_array( $variant, array( 'auto', 'auto-transparent' ), true ) ) {
+			return $variant;
+		}
+		$color = $this->automatic_icon_color( $attachment_id, $settings['badge_position'] );
+		return $color . ( 'auto-transparent' === $variant ? '-transparent' : '' );
+	}
+
+	private function automatic_icon_color( $attachment_id, $position ) {
+		$file = get_attached_file( $attachment_id );
+		if ( ! $file || ! is_readable( $file ) || ! wp_attachment_is_image( $attachment_id ) ) {
+			return 'white';
+		}
+		$signature = md5( $file . '|' . (string) filemtime( $file ) . '|' . (string) filesize( $file ) );
+		$cache = get_post_meta( $attachment_id, '_wki_auto_icon_contrast', true );
+		if ( is_array( $cache ) && isset( $cache[ $position ]['signature'], $cache[ $position ]['color'] ) && hash_equals( $signature, $cache[ $position ]['signature'] ) ) {
+			return in_array( $cache[ $position ]['color'], array( 'black', 'white' ), true ) ? $cache[ $position ]['color'] : 'white';
+		}
+		$luminance = $this->image_region_luminance( $file, $position );
+		$color = null !== $luminance && $luminance > 0.179 ? 'black' : 'white';
+		$cache = is_array( $cache ) ? $cache : array();
+		$cache[ $position ] = array(
+			'signature' => $signature,
+			'color' => $color,
+			'luminance' => null === $luminance ? null : round( $luminance, 4 ),
+		);
+		update_post_meta( $attachment_id, '_wki_auto_icon_contrast', $cache );
+		return $color;
+	}
+
+	private function image_region_luminance( $file, $position ) {
+		if ( class_exists( 'Imagick' ) ) {
+			$luminance = $this->imagick_region_luminance( $file, $position );
+			if ( null !== $luminance ) {
+				return $luminance;
+			}
+		}
+		return $this->gd_region_luminance( $file, $position );
+	}
+
+	private function sample_region( $width, $height, $position ) {
+		$sample_width = max( 1, (int) round( $width * 0.35 ) );
+		$sample_height = max( 1, (int) round( $height * 0.25 ) );
+		$is_right = false !== strpos( $position, 'right' );
+		$is_bottom = false !== strpos( $position, 'bottom' );
+		return array(
+			$is_right ? max( 0, $width - $sample_width ) : 0,
+			$is_bottom ? max( 0, $height - $sample_height ) : 0,
+			$sample_width,
+			$sample_height,
+		);
+	}
+
+	private function imagick_region_luminance( $file, $position ) {
+		$image = null;
+		try {
+			$image = new Imagick( $file . '[0]' );
+			if ( method_exists( $image, 'autoOrient' ) ) {
+				$image->autoOrient();
+			} elseif ( method_exists( $image, 'autoOrientImage' ) ) {
+				$image->autoOrientImage();
+			}
+			$width = $image->getImageWidth();
+			$height = $image->getImageHeight();
+			if ( $width < 1 || $height < 1 ) {
+				return null;
+			}
+			list( $x, $y, $sample_width, $sample_height ) = $this->sample_region( $width, $height, $position );
+			$image->cropImage( $sample_width, $sample_height, $x, $y );
+			if ( $image->getImageAlphaChannel() ) {
+				$background = new Imagick();
+				$background->newImage( $sample_width, $sample_height, new ImagickPixel( 'white' ) );
+				$background->compositeImage( $image, Imagick::COMPOSITE_OVER, 0, 0 );
+				$image->clear();
+				$image = $background;
+			}
+			$image->thumbnailImage( 64, 64, true );
+			$pixels = $image->exportImagePixels( 0, 0, $image->getImageWidth(), $image->getImageHeight(), 'RGB', Imagick::PIXEL_CHAR );
+			return $this->pixel_luminance_average( $pixels );
+		} catch ( Throwable $exception ) {
+			return null;
+		} finally {
+			if ( $image instanceof Imagick ) {
+				$image->clear();
+				$image->destroy();
+			}
+		}
+	}
+
+	private function gd_region_luminance( $file, $position ) {
+		if ( ! function_exists( 'gd_info' ) || ! function_exists( 'imagecreatefromstring' ) || filesize( $file ) > 50 * 1024 * 1024 ) {
+			return null;
+		}
+		$contents = file_get_contents( $file );
+		if ( false === $contents ) {
+			return null;
+		}
+		$source = @imagecreatefromstring( $contents );
+		if ( false === $source ) {
+			return null;
+		}
+		$width = imagesx( $source );
+		$height = imagesy( $source );
+		list( $x, $y, $sample_width, $sample_height ) = $this->sample_region( $width, $height, $position );
+		$target_width = min( 64, $sample_width );
+		$target_height = min( 64, $sample_height );
+		$sample = imagecreatetruecolor( $target_width, $target_height );
+		$white = imagecolorallocate( $sample, 255, 255, 255 );
+		imagefill( $sample, 0, 0, $white );
+		imagealphablending( $sample, true );
+		imagecopyresampled( $sample, $source, 0, 0, $x, $y, $target_width, $target_height, $sample_width, $sample_height );
+		$pixels = array();
+		for ( $pixel_y = 0; $pixel_y < $target_height; $pixel_y++ ) {
+			for ( $pixel_x = 0; $pixel_x < $target_width; $pixel_x++ ) {
+				$rgb = imagecolorat( $sample, $pixel_x, $pixel_y );
+				$pixels[] = ( $rgb >> 16 ) & 0xFF;
+				$pixels[] = ( $rgb >> 8 ) & 0xFF;
+				$pixels[] = $rgb & 0xFF;
+			}
+		}
+		imagedestroy( $sample );
+		imagedestroy( $source );
+		return $this->pixel_luminance_average( $pixels );
+	}
+
+	private function pixel_luminance_average( $pixels ) {
+		$count = count( $pixels );
+		if ( $count < 3 ) {
+			return null;
+		}
+		$total = 0.0;
+		$samples = 0;
+		for ( $index = 0; $index + 2 < $count; $index += 3 ) {
+			$red = $this->linear_color_channel( $pixels[ $index ] / 255 );
+			$green = $this->linear_color_channel( $pixels[ $index + 1 ] / 255 );
+			$blue = $this->linear_color_channel( $pixels[ $index + 2 ] / 255 );
+			$total += 0.2126 * $red + 0.7152 * $green + 0.0722 * $blue;
+			$samples++;
+		}
+		return $samples ? $total / $samples : null;
+	}
+
+	private function linear_color_channel( $channel ) {
+		return $channel <= 0.04045 ? $channel / 12.92 : pow( ( $channel + 0.055 ) / 1.055, 2.4 );
+	}
+
+	private function icon_url( $attachment_id ) {
+		$variant = $this->resolved_icon_variant( $attachment_id );
 		return plugins_url( 'assets/eu-icons/ai-basic-' . $variant . '.svg', WKI_FILE );
 	}
 
 	private function type_icon_url( $attachment_id ) {
-		$settings = $this->settings();
 		$type = $this->attachment_type( $attachment_id );
-		$variant = $settings['icon_variant'];
+		$variant = $this->resolved_icon_variant( $attachment_id );
 		return plugins_url( 'assets/eu-icons/ai-' . $type . '-' . $variant . '.svg', WKI_FILE );
 	}
 
@@ -402,7 +548,7 @@ final class WKI_Plugin {
 				<?php $font_options = $this->available_fonts(); ?><tr><th scope="row"><label for="wki-font-family">Schriftfamilie</label></th><td><select id="wki-font-family" name="wki_settings[font_family]"><?php foreach ( $font_options as $value => $label ) : ?><option value="<?php echo esc_attr( $value ); ?>" <?php selected( $settings['font_family'], $value ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select><p class="description">Avada-Schriftarten werden automatisch aus den Theme-Einstellungen übernommen.</p></td></tr>
 				<tr><th scope="row"><label for="wki-font-weight">Schriftstärke</label></th><td><select id="wki-font-weight" name="wki_settings[font_weight]"><?php foreach ( array( 300 => 'Leicht', 400 => 'Normal', 500 => 'Medium', 600 => 'Halbfett', 700 => 'Fett' ) as $value => $label ) : ?><option value="<?php echo esc_attr( $value ); ?>" <?php selected( $settings['font_weight'], $value ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select></td></tr>
 				<tr><th scope="row"><label for="wki-text-color">Schriftfarbe</label></th><td><input id="wki-text-color" type="color" name="wki_settings[text_color]" value="<?php echo esc_attr( $settings['text_color'] ); ?>"></td></tr>
-				<tr><th scope="row"><label for="wki-icon-variant">EU-Icon-Variante</label></th><td><select id="wki-icon-variant" name="wki_settings[icon_variant]"><option value="black" <?php selected( $settings['icon_variant'], 'black' ); ?>>Schwarz</option><option value="black-transparent" <?php selected( $settings['icon_variant'], 'black-transparent' ); ?>>Schwarz, transparent</option><option value="white" <?php selected( $settings['icon_variant'], 'white' ); ?>>Weiß</option><option value="white-transparent" <?php selected( $settings['icon_variant'], 'white-transparent' ); ?>>Weiß, transparent</option></select><p class="description">Die offiziellen EU-Symbole werden zusammen mit einer verständlichen Textbeschriftung ausgegeben.</p></td></tr>
+				<tr><th scope="row"><label for="wki-icon-variant">EU-Icon-Variante</label></th><td><select id="wki-icon-variant" name="wki_settings[icon_variant]"><option value="auto" <?php selected( $settings['icon_variant'], 'auto' ); ?>>Auto – optimaler Kontrast</option><option value="auto-transparent" <?php selected( $settings['icon_variant'], 'auto-transparent' ); ?>>Auto – optimaler Kontrast, transparent</option><option value="black" <?php selected( $settings['icon_variant'], 'black' ); ?>>Schwarz</option><option value="black-transparent" <?php selected( $settings['icon_variant'], 'black-transparent' ); ?>>Schwarz, transparent</option><option value="white" <?php selected( $settings['icon_variant'], 'white' ); ?>>Weiß</option><option value="white-transparent" <?php selected( $settings['icon_variant'], 'white-transparent' ); ?>>Weiß, transparent</option></select><p class="description">Auto untersucht lokal den Bildbereich an der gewählten Badge-Position und verwendet das kontrastreichere schwarze oder weiße EU-Symbol. Das Ergebnis wird pro Bild und Position zwischengespeichert.</p></td></tr>
 			</table>
 			<?php submit_button( 'Einstellungen speichern' ); ?>
 		</form></div>

@@ -22,6 +22,7 @@ WordPress-Plugin zur manuellen und optional automatischen Kennzeichnung von KI-g
 - Reguläre Alt-Texte werden beim manuellen Kennzeichnen automatisch ergänzt, wenn noch kein eigener Alt-Text vorhanden ist.
 - Vergrößerbare Hover-Darstellung des breiten EU-Typ-Logos mit einstellbarer sichtbarer Höhe und festem vertikalem Mittelpunkt.
 - Auswahl der vier offiziellen Icon-Varianten: schwarz, weiß und jeweils transparent.
+- Standalone-Kontrastautomatik über Imagick oder GD: Der Bildbereich an der Badge-Position bestimmt, ob das schwarze oder weiße EU-Logo verwendet wird; das Ergebnis wird im Attachment-Metadatum gecacht.
 - Erfassung regulärer WordPress-Bilder und direkt von Avada ausgegebener Image-Elemente über die Attachment-Klasse.
 - Erfassung von Avada-Container-Hintergründen über `data-bg` und `data-bg-url`.
 - Manuelle Kennzeichnungen haben Vorrang und werden von der automatischen Erkennung nicht überschrieben.

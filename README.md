@@ -20,6 +20,7 @@ WordPress-Plugin zur manuellen und optional automatischen Kennzeichnung von KI-g
 - Avada-Bildzooms bleiben auf das Inhaltsbild begrenzt und verändern die Badge-Logos nicht.
 - Allgemeines EU-`AI`-Symbol mit optionalem Wechsel zum gewählten Typ-Symbol bei Mouseover.
 - Reguläre Alt-Texte werden beim manuellen Kennzeichnen automatisch ergänzt, wenn noch kein eigener Alt-Text vorhanden ist.
+- Manueller Medien-Manager-Button ergänzt oder aktualisiert die KI-Kennzeichnung am Ende vorhandener Alt-Texte, ohne Beschreibungen zu überschreiben oder Kennzeichnungen zu verdoppeln.
 - Vergrößerbare Hover-Darstellung des breiten EU-Typ-Logos mit einstellbarer sichtbarer Höhe und festem vertikalem Mittelpunkt.
 - Auswahl der vier offiziellen Icon-Varianten: schwarz, weiß und jeweils transparent.
 - Standalone-Kontrastautomatik über Imagick oder GD: Der Bildbereich an der Badge-Position bestimmt, ob das schwarze oder weiße EU-Logo verwendet wird; das Ergebnis wird im Attachment-Metadatum gecacht.

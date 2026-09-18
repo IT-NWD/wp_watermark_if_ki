@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP KI-Badge Plugin
  * Description: Kennzeichnet KI-generierte Bilder im Medien-Manager und optional im Frontend.
- * Version: 0.6.0
+ * Version: 0.6.1
  * Author: IT-NWD
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WKI_VERSION', '0.6.0' );
+define( 'WKI_VERSION', '0.6.1' );
 define( 'WKI_FILE', __FILE__ );
 define( 'WKI_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -38,6 +38,8 @@ final class WKI_Plugin {
 		add_action( 'edit_attachment', array( $this, 'auto_detect_attachment' ) );
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_script' ) );
+		add_action( 'wp_ajax_wki_update_alt_text', array( $this, 'ajax_update_alt_text' ) );
 		add_filter( 'wp_get_attachment_image_attributes', array( $this, 'image_attributes' ), 10, 3 );
 		add_shortcode( 'wki_ai_background', array( $this, 'background_shortcode' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_style' ) );
@@ -163,7 +165,22 @@ final class WKI_Plugin {
 			'input' => 'html',
 			'html' => sprintf( '<select name="attachments[%1$d][wki_ai_type]"><option value="generated" %2$s>Vollständig KI-generiert</option><option value="modified" %3$s>Teilweise KI-modifiziert</option><option value="basic" %4$s>Grundlegendes KI-Symbol</option></select><p class="description">Orientiert sich an den EU-Icons zur Kennzeichnung von KI-generierten Inhalten.</p>', $post->ID, selected( $this->attachment_type( $post->ID ), 'generated', false ), selected( $this->attachment_type( $post->ID ), 'modified', false ), selected( $this->attachment_type( $post->ID ), 'basic', false ) ),
 		);
+		$form_fields['wki_alt_text_action'] = array(
+			'label' => 'KI-Alt-Text',
+			'input' => 'html',
+			'html' => sprintf( '<button type="button" class="button wki-update-alt-text" data-attachment-id="%1$d">KI-Kennzeichnung in Alt-Text übernehmen</button><span class="wki-alt-text-status" aria-live="polite"></span><p class="description">Ergänzt die KI-Kennzeichnung hinter einer vorhandenen Bildbeschreibung. Bereits vorhandene KI-Endungen werden nicht verdoppelt.</p>', absint( $post->ID ) ),
+		);
 		return $form_fields;
+	}
+
+	public function enqueue_admin_script() {
+		wp_enqueue_script( 'wki-admin', plugins_url( 'assets/admin.js', WKI_FILE ), array( 'jquery' ), WKI_VERSION, true );
+		wp_localize_script( 'wki-admin', 'wkiAltText', array(
+			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+			'nonce' => wp_create_nonce( 'wki_update_alt_text' ),
+			'working' => 'Alt-Text wird aktualisiert …',
+			'error' => 'Der Alt-Text konnte nicht aktualisiert werden.',
+		) );
 	}
 
 	public function save_media_field( $post, $attachment ) {
@@ -189,6 +206,60 @@ final class WKI_Plugin {
 	private function default_alt_text( $type ) {
 		$labels = array( 'generated' => 'KI-generiertes Bild', 'modified' => 'Teilweise KI-modifiziertes Bild', 'basic' => 'KI-gekennzeichnetes Bild' );
 		return $labels[ $type ] ?? $labels['generated'];
+	}
+
+	private function alt_text_with_ai_label( $existing_alt, $type ) {
+		$alt = trim( sanitize_text_field( $existing_alt ) );
+		$labels = array(
+			$this->default_alt_text( 'generated' ),
+			$this->default_alt_text( 'modified' ),
+			$this->default_alt_text( 'basic' ),
+		);
+		do {
+			$previous = $alt;
+			foreach ( $labels as $label ) {
+				if ( $alt === $label ) {
+					$alt = '';
+					break;
+				}
+				$alt = preg_replace( '/\s+[–—-]\s*' . preg_quote( $label, '/' ) . '\s*$/u', '', $alt );
+			}
+		} while ( $previous !== $alt );
+		$label = $this->default_alt_text( $type );
+		return '' === $alt ? $label : rtrim( $alt ) . ' – ' . $label;
+	}
+
+	private function update_attachment_alt_text( $attachment_id ) {
+		if ( 'attachment' !== get_post_type( $attachment_id ) || ! wp_attachment_is_image( $attachment_id ) ) {
+			return new WP_Error( 'wki_invalid_attachment', 'Das ausgewählte Medium ist kein Bild.' );
+		}
+		if ( ! $this->is_ai( $attachment_id ) ) {
+			return new WP_Error( 'wki_not_ai', 'Das Bild muss zuerst als KI-Bild gekennzeichnet und gespeichert werden.' );
+		}
+		$type = $this->attachment_type( $attachment_id );
+		$existing_alt = (string) get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
+		$updated_alt = $this->alt_text_with_ai_label( $existing_alt, $type );
+		update_post_meta( $attachment_id, '_wp_attachment_image_alt', $updated_alt );
+		return array(
+			'alt_text' => $updated_alt,
+			'changed' => $existing_alt !== $updated_alt,
+		);
+	}
+
+	public function ajax_update_alt_text() {
+		check_ajax_referer( 'wki_update_alt_text', 'nonce' );
+		$attachment_id = absint( $_POST['attachment_id'] ?? 0 );
+		if ( ! $attachment_id || ! current_user_can( 'edit_post', $attachment_id ) ) {
+			wp_send_json_error( array( 'message' => 'Du darfst dieses Bild nicht bearbeiten.' ), 403 );
+		}
+		$result = $this->update_attachment_alt_text( $attachment_id );
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( array( 'message' => $result->get_error_message() ), 400 );
+		}
+		wp_send_json_success( array(
+			'altText' => $result['alt_text'],
+			'message' => $result['changed'] ? 'Der Alt-Text wurde aktualisiert.' : 'Der Alt-Text ist bereits aktuell.',
+		) );
 	}
 
 	public function media_column( $columns ) {

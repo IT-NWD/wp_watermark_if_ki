@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP KI-Badge Plugin
  * Description: Kennzeichnet KI-generierte Bilder im Medien-Manager und optional im Frontend.
- * Version: 0.4.0
+ * Version: 0.4.1
  * Author: IT-NWD
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WKI_VERSION', '0.4.0' );
+define( 'WKI_VERSION', '0.4.1' );
 define( 'WKI_FILE', __FILE__ );
 define( 'WKI_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -148,6 +148,9 @@ final class WKI_Plugin {
 	}
 
 	public function save_media_field( $post, $attachment ) {
+		if ( ! array_key_exists( 'wki_is_ai', $attachment ) && ! array_key_exists( 'wki_ai_type', $attachment ) ) {
+			return $post;
+		}
 		if ( isset( $attachment['wki_is_ai'] ) ) {
 			update_post_meta( $post['ID'], '_wki_is_ai', '1' );
 			update_post_meta( $post['ID'], '_wki_ai_source', 'manual' );

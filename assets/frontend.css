@@ -59,6 +59,7 @@
 	width: var(--wki-badge-logo-size, 16px);
 	height: var(--wki-badge-logo-size, 16px);
 	flex: 0 0 auto;
+	transition: width .15s ease, height .15s ease;
 }
 
 .wki-ai-logo .wki-ai-icon { position: absolute; inset: 0; }
@@ -67,6 +68,11 @@
 .wki-ai-badge:focus-within .wki-ai-icon--general { display: none; }
 .wki-ai-badge:hover .wki-ai-icon--specific,
 .wki-ai-badge:focus-within .wki-ai-icon--specific { display: block; }
+.wki-ai-badge:hover .wki-ai-logo,
+.wki-ai-badge:focus-within .wki-ai-logo {
+	width: var(--wki-badge-logo-hover-size, 30px);
+	height: var(--wki-badge-logo-hover-size, 30px);
+}
 
 .wki-ai-badge--bottom-left { inset-inline-start: 8px; inset-block-end: 8px; }
 .wki-ai-badge--bottom-right { inset-inline-end: 8px; inset-block-end: 8px; }

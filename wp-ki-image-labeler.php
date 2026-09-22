@@ -1,20 +1,20 @@
 <?php
 /**
- * Plugin Name: WP KI-Badge Plugin
+ * Plugin Name: KI-Badge
  * Description: Kennzeichnet KI-generierte Bilder im Medien-Manager und optional im Frontend.
- * Version: 0.6.1
+ * Version: 0.6.2
  * Author: IT-NWD
  * Requires at least: 6.2
  * Requires PHP: 7.4
  * License: GPL-2.0-or-later
- * Text Domain: wp-ki-image-labeler
+ * Text Domain: ki-badge
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WKI_VERSION', '0.6.1' );
+define( 'WKI_VERSION', '0.6.2' );
 define( 'WKI_FILE', __FILE__ );
 define( 'WKI_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -83,16 +83,17 @@ final class WKI_Plugin {
 		if ( has_filter( 'fusion_builder_live_request' ) && apply_filters( 'fusion_builder_live_request', false ) ) {
 			return true;
 		}
-		if ( isset( $_POST['model'] ) && is_user_logged_in() && current_user_can( 'edit_posts' ) ) {
+		if ( filter_has_var( INPUT_POST, 'model' ) && is_user_logged_in() && current_user_can( 'edit_posts' ) ) {
 			return true;
 		}
 		$editor_parameters = array( 'fb-edit', 'fb_live_editor', 'fusion_builder', 'fusion_builder_live', 'fusion-builder' );
 		foreach ( $editor_parameters as $parameter ) {
-			if ( isset( $_GET[ $parameter ] ) || isset( $_POST[ $parameter ] ) ) {
+			if ( filter_has_var( INPUT_GET, $parameter ) || filter_has_var( INPUT_POST, $parameter ) ) {
 				return true;
 			}
 		}
-		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+		$request_uri = filter_input( INPUT_SERVER, 'REQUEST_URI', FILTER_SANITIZE_URL );
+		$request_uri = is_string( $request_uri ) ? $request_uri : '';
 		if ( preg_match( '/(?:fb-edit|fb_live_editor|fusion_builder|fusion-builder)/i', $request_uri ) ) {
 			return true;
 		}
@@ -248,7 +249,7 @@ final class WKI_Plugin {
 
 	public function ajax_update_alt_text() {
 		check_ajax_referer( 'wki_update_alt_text', 'nonce' );
-		$attachment_id = absint( $_POST['attachment_id'] ?? 0 );
+		$attachment_id = absint( wp_unslash( $_POST['attachment_id'] ?? 0 ) );
 		if ( ! $attachment_id || ! current_user_can( 'edit_post', $attachment_id ) ) {
 			wp_send_json_error( array( 'message' => 'Du darfst dieses Bild nicht bearbeiten.' ), 403 );
 		}
@@ -594,13 +595,13 @@ final class WKI_Plugin {
 	}
 
 	public function admin_menu() {
-		add_menu_page( 'WP KI-Badge Plugin', 'KI-Badge', 'manage_options', 'wki-settings', array( $this, 'settings_page' ), 'dashicons-format-image', 58 );
+		add_menu_page( 'KI-Badge', 'KI-Badge', 'manage_options', 'wki-settings', array( $this, 'settings_page' ), 'dashicons-format-image', 58 );
 	}
 
 	public function settings_page() {
 		$settings = $this->settings();
 		?>
-		<div class="wrap"><h1>WP KI-Badge Plugin</h1>
+		<div class="wrap"><h1>KI-Badge</h1>
 		<p>Manuelle Kennzeichnungen werden im Medien-Manager am jeweiligen Bild gesetzt. Die automatische Erkennung durchsucht Bild-Metadaten, überschreibt aber keine manuelle Entscheidung.</p>
 		<form method="post" action="options.php">
 			<?php settings_fields( 'wki_settings_group' ); ?>
